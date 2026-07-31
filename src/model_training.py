@@ -2,119 +2,89 @@ import pandas as pd
 import joblib
 
 from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 
 
 DATA_PATH = "data/cars_features.csv"
-MODEL_PATH = "models/car_price_model.joblib"
+
+PREPROCESSOR_PATH = "models/preprocessor.joblib"
+
+MODEL_PATH = "models/final_car_price_model.joblib"
 
 TARGET = "priceusd"
 
 
-def create_pipeline():
 
-    df = pd.read_csv(DATA_PATH)
+print("Loading dataset...")
 
-    X = df.drop(columns=[TARGET])
-    y = df[TARGET]
-
-
-    numeric_features = [
-        "year",
-        "mileage_kilometers",
-        "volume_cm3",
-        "car_age",
-        "mileage_per_year",
-        "engine_volume_liters",
-        "is_high_mileage"
-    ]
-
-
-    categorical_features = [
-        "make",
-        "model",
-        "condition",
-        "fuel_type",
-        "color",
-        "transmission",
-        "drive_unit",
-        "segment",
-        "brand_model"
-    ]
-
-
-    numeric_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler())
-    ])
-
-
-    categorical_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("encoder", OneHotEncoder(handle_unknown="ignore"))
-    ])
-
-
-    preprocessor = ColumnTransformer([
-        ("num", numeric_pipeline, numeric_features),
-        ("cat", categorical_pipeline, categorical_features)
-    ])
-
-
-    model = LinearRegression()
-
-
-    pipeline = Pipeline([
-        ("preprocessor", preprocessor),
-        ("model", model)
-    ])
-
-
-    return pipeline, X, y
+df = pd.read_csv(DATA_PATH)
 
 
 
-def main():
+print("Splitting features and target...")
 
-    print("Loading data...")
-
-
-    pipeline, X, y = create_pipeline()
-
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        random_state=42
-    )
-
-
-    print("Training model...")
-
-
-    pipeline.fit(
-        X_train,
-        y_train
-    )
-
-
-    joblib.dump(
-        pipeline,
-        MODEL_PATH
-    )
-
-
-    print("Model saved successfully!")
-    print(MODEL_PATH)
+X = df.drop(columns=[TARGET])
+y = df[TARGET]
 
 
 
-if __name__ == "__main__":
-    main()
+print("Creating train/test split...")
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+
+
+print("Loading preprocessor...")
+
+preprocessor = joblib.load(
+    PREPROCESSOR_PATH
+)
+
+
+
+print("Creating Random Forest model...")
+
+
+model = RandomForestRegressor(
+    n_estimators=100,
+    random_state=42,
+    n_jobs=-1
+)
+
+
+
+pipeline = Pipeline([
+    ("preprocessor", preprocessor),
+    ("model", model)
+])
+
+
+
+print("Training model...")
+
+pipeline.fit(
+    X_train,
+    y_train
+)
+
+
+
+print("Saving trained model...")
+
+
+joblib.dump(
+    pipeline,
+    MODEL_PATH
+)
+
+
+
+print("Model saved successfully!")
+
+print(f"Saved location: {MODEL_PATH}")
